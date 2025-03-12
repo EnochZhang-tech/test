@@ -1,0 +1,79 @@
+# Basic
+gpu_id: 0
+# dataset
+data_path: "./TM_data/Scenario_1/"
+filename: 'TM_train_1min_drift_2023_0727-0731.csv'   # src_dataset
+test_path: './TM_data/Scenario_1/TM_test_1min_2024_0403-0413.csv'
+# Graph
+graph_path : "./Gene_graph/Graph_data2"
+graph_file: ['48_node_train_graph_6.xlsx']
+#graph_file: ['train_graph_8.xlsx']
+
+# training config
+input_len: 45 # optimal
+output_len: 15
+capacity: 4
+out_capacity: 1
+patient: 10
+var_len: 1 # diff should +1
+
+#normalization method
+MinMaxNormalization: True
+
+#seqloss_figure
+DoYouNeedEpochSeqlossFigure: False
+
+#transformer
+
+#SegRNN
+
+seg_len: 5
+
+# model general param
+gcn_k: 3   # for GCN
+dilation_0: 4
+layers: 1  #num of model
+dropout: 0.1
+
+#Informer param
+out_dim: 4
+
+# TCN-GCN model param
+ks: 3   # kernel size of CausalConv2d
+channels_list: [16, 32]   # feature dimension 1->16->32...
+d_0: 1   # initial dilated rate
+tcn_layers: [32,64]
+
+# GRU_GCN / GCN_LSTM / AGCRN model param
+hidden_dim: 16   #hidden layer dimension of GRU
+embed_dim: 10
+
+
+
+
+# data setting
+binary: True
+weight_adj_epsilon: 0.4
+dtw_topk: 2
+train_normal_flag: True
+test_normal_flag: True
+
+#model
+seed: 3407
+num_workers: 0 #
+epoch: 200
+batch_size: 32 # optimal 16
+output_path: "./output/"
+log_per_steps: 1000
+lr: 0.0001     # optimal
+clip_norm: 5 #?
+weight_decay: 0 #? trick
+learner: "adam" # 1
+lr_decay: False #? trick
+lr_scheduler_type: None #?
+lr_eta_min: 0.00001 #?
+lr_decay_ratio: 0.1 #?
+lr_warmup_epoch: 5 #?
+lr_warmup_init: 0.000001 #?
+loss: "FilterMSELoss" #
+
