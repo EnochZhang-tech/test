@@ -80,7 +80,7 @@ def SMAPE(pred, gt):
 
 
 
-def sliding_window(np_X, np_Y, n_in, n_out=15, in_start=0):
+def sliding_window(np_X, np_Y, n_in, n_out=24, in_start=0):
     '''
     :param np_X: (3600, 43)
     :param np_Y: (3600, 1)
@@ -97,11 +97,11 @@ def sliding_window(np_X, np_Y, n_in, n_out=15, in_start=0):
             # 多变量输入
             x.append(np_X[in_start:in_end, :])
             y.append(np_Y[in_end:out_end, :])
-        in_start += 1  # 0 + 1
+        in_start += n_out  # 0 + 1
     return np.array(x), np.array(y)
 
 
-def sliding_window_test(np_X, np_Y, n_in, n_out=15, in_start=0):
+def sliding_window_test(np_X, np_Y, n_in, n_out=24, in_start=0):
     '''
     :param np_X: (3600, 43)
     :param np_Y: (3600, 1)
@@ -138,7 +138,7 @@ def evaluate_forecasts(predictions, gts, features):
     return all_rmse, all_mae, all_mape, all_smape, all_RAE
 
 
-def Seq2Seq_model(train_x, train_y, modelfile, flag, pred_len,epochs_num=100, batch_size_set=32, lr_rate=0.003, verbose_flag=0):
+def Seq2Seq_model(train_x, train_y, modelfile, flag, pred_len,epochs_num=100, batch_size_set=16, lr_rate=0.01, verbose_flag=0): #exchange和ETTh2的批次为32学习率为0.0001，weather的批次为16学习率为0.003
     time_start = time.time()
     if flag == True:
         n_timesteps, n_features, n_outputs = train_x.shape[1], train_x.shape[2], train_y.shape[1]  #
@@ -149,7 +149,7 @@ def Seq2Seq_model(train_x, train_y, modelfile, flag, pred_len,epochs_num=100, ba
         inputs = Input(shape=(n_timesteps, n_features))  # 输入特征接收维度
 
         # input1 = Conv1D(20, kernel_size=4, activation='sigmoid', padding='same', strides=2)(inputs)
-        input2 = Conv1D(4, kernel_size=3, activation='relu', padding='same', strides=1)(inputs)#这里因为same_padding和s=2所以输出时间步变为一半向上取整，可以理解
+        input2 = Conv1D(1, kernel_size=3, activation='relu', padding='same', strides=1)(inputs)#这里因为same_padding和s=2所以输出时间步变为一半向上取整，可以理解
 
         x = BatchNormalization()(input2)#不会改变维度，仅仅进行正则化和加速收敛
 
@@ -174,7 +174,7 @@ def Seq2Seq_model(train_x, train_y, modelfile, flag, pred_len,epochs_num=100, ba
 
         # decoder_outputs = Bidirectional(
         #     LSTM(64, return_state=False, return_sequences=True, activation='relu'))(input2)  # 测试relu
-        pre_output = TimeDistributed(Dense(4, activation='tanh'))(decoder_outputs)  # (batch_size,15,4)
+        pre_output = TimeDistributed(Dense(1, activation='tanh'))(decoder_outputs)  # (batch_size,15,4)
         # output = TimeDistributed(Dense(4, activation='relu'))(decoder_outputs)#(batch_size,15,4)
         output = pre_output[:,-pred_len:,:]
 
@@ -286,18 +286,18 @@ def compute_final_result(all_RMSE, all_MAE, all_MAPE, all_SMAPE):
 if __name__ == '__main__':
     set_seed(3407)
     #短期
-    # df_train = pd.read_csv(r'E:\python\项目目录\Pi_idea3.1\TM_data\Scenario_1\TM_train_1min_drift_2023_0727-0731.csv')
-    # df_test = pd.read_csv(r'E:\python\项目目录\Pi_idea3.1\TM_data\Scenario_1\TM_test_1min_2024_0403-0413.csv')
+    # df_train = pd.read_csv(r'F:\MTSF\CM\Compare_Models\Dataset\ETTh1_train.csv')
+    # df_test = pd.read_csv(r'F:\MTSF\CM\Compare_Models\Dataset\ETTh1_test.csv')
 
     #长期
-    df_train = pd.read_csv(r'E:\python\项目目录\Pi_idea3.1\TM_data\Scenario_1\TM_train_1min_drift_2023_0727-0731.csv')
-    df_test = pd.read_csv(r'E:\python\项目目录\Pi_idea3.1\TM_data\Scenario_1\TM_test_1min_2024_0403-0413.csv')
+    df_train = pd.read_csv(r'F:\MTSF\CM\Compare_Models\Dataset\weather_train.csv')  #ETTh2 exchange_rate
+    df_test = pd.read_csv(r'F:\MTSF\CM\Compare_Models\Dataset\weather_test.csv')   #ETTh2 exchange_rate
 
-    # input_step = 504
+    # input_step = 1008
     # output_step = 168
-    input_step = 45
-    output_step = 15
-    train_flag =False
+    input_step = 144
+    output_step = 24
+    train_flag =True
     spnd_num = df_train.values.shape[1]
     save_pred_Data = True
     data = []
@@ -311,36 +311,36 @@ if __name__ == '__main__':
 
 
     """"StandardScaler"""
-    # data_train = df_train.iloc[:, 1:]
-    # data_test = df_test.iloc[:, 1:]
-    #
-    #
-    # # 创建标准化器
-    # scaler = StandardScaler()
-    #
-    # # 对训练数据进行标准化
-    # np_train_x = scaler.fit_transform(data_train.values[:, :])
-    # np_train_y = scaler.fit_transform(data_train.values[:, :])  # 如果你想用相同的标准化参数
-    #
-    # # 对测试数据进行标准化
-    # np_test_x = scaler.transform(data_test.values[:, :])  # 注意：使用训练集的标准化参数
-    # np_test_y = (data_test.values[:, :])
-    """"MinMaxScaler"""
+    data_train = df_train.iloc[:,-1: ]
+    data_test = df_test.iloc[:,-1: ]
 
 
-    data_train = df_train.iloc[:, 1:]
-    data_test = df_test.iloc[:, 1:]
+    # 创建标准化器
+    scaler = StandardScaler()
 
-    # 创建 Min-Max 归一化器
-    scaler = MinMaxScaler()
-
-    # 对训练数据进行归一化
+    # 对训练数据进行标准化
     np_train_x = scaler.fit_transform(data_train.values[:, :])
-    np_train_y = scaler.fit_transform(data_train.values[:, :])  # 使用相同的归一化参数
+    np_train_y = scaler.fit_transform(data_train.values[:, :])  # 如果你想用相同的标准化参数
 
-    # 对测试数据进行归一化
-    np_test_x = scaler.transform(data_test.values[:, :])  # 注意：使用训练集的归一化参数
+    # 对测试数据进行标准化
+    np_test_x = scaler.transform(data_test.values[:, :])  # 注意：使用训练集的标准化参数
+    np_test_y = (data_test.values[:, :])
+
+    """"MinMaxScaler"""
+    # data_train = df_train.iloc[:,-1: ]  #1: 1+7
+    # data_test = df_test.iloc[:,-1: ]  #1: 1+7
+    #
+    # # 创建 Min-Max 归一化器
+    # scaler = MinMaxScaler()
+    #
+    # # 对训练数据进行归一化
+    # np_train_x = scaler.fit_transform(data_train.values[:, :])
+    # np_train_y = scaler.fit_transform(data_train.values[:, :])  # 使用相同的归一化参数
+    #
+    # # 对测试数据进行归一化
+    # np_test_x = scaler.transform(data_test.values[:, :])  # 注意：使用训练集的归一化参数
     np_test_y = data_test.values[:, :]  # 这里不需要归一化
+
 
     train_x, train_y = sliding_window(np_train_x, np_train_y, input_step,output_step)
     # print('train_x:', train_x.shape, 'train_y:', train_y.shape)
@@ -348,7 +348,7 @@ if __name__ == '__main__':
     test_x, test_y = sliding_window_test(np_test_x, np_test_y, input_step,output_step)
     # print('test_x:', test_x.shape, 'test_y:', test_y.shape)
 
-    model_file ='.\MODEL\CNN-Seq2Seq\short_term_CNN_seq2seq_epoch\exp1_{epoch:02d}.h5'
+    model_file ='Test.\CNN-Seq2Seq\short_term_CNN_seq2seq_epoch\exp1_{epoch:02d}.keras'
     # model_file ='r.\MODEL\CNN-Seq2Seq\short_term_CNN_seq2seq_epoch_{epoch:02d}.h5'
     if train_flag:
         model = Seq2Seq_model(train_x, train_y, modelfile=model_file, flag=train_flag,pred_len=output_step)
@@ -366,7 +366,7 @@ if __name__ == '__main__':
 
     # 遍历每个 epoch 的模型文件，加载并进行预测
     for epoch in range(1, epochs_num + 1):
-        model_file = f'.\MODEL\CNN-Seq2Seq\short_term_CNN_seq2seq_epoch\exp1_{epoch:02d}.h5'
+        model_file = f'Test.\CNN-Seq2Seq\short_term_CNN_seq2seq_epoch\exp1_{epoch:02d}.keras'
         # model_file = f'r.\MODEL\CNN-Seq2Seq\short_term_CNN_seq2seq_epoch_{epoch:02d}.h5'
         try:# 生成当前 epoch 的文件名 # 加载模型
             model = load_model(model_file)
@@ -377,8 +377,8 @@ if __name__ == '__main__':
 
 
 
-        predict_result=predict_result.reshape(-1,4)
-        test_y = test_y.reshape(-1,4)
+        predict_result=predict_result.reshape(-1,1)
+        test_y = test_y.reshape(-1,1)
 
         predict_result = scaler.inverse_transform(predict_result)
 
@@ -391,7 +391,7 @@ if __name__ == '__main__':
 
 
         # 评估预测
-        all_rmse, all_mae, all_mape, all_smape, all_RAE = evaluate_forecasts(predict_result,real_data,4)
+        all_rmse, all_mae, all_mape, all_smape, all_RAE = evaluate_forecasts(predict_result,real_data,1)
 
         rmse = np.mean(all_rmse[:])
         mae = np.mean(all_mae[:])
@@ -413,6 +413,7 @@ if __name__ == '__main__':
 
         if smape < best_metric:
             best_metric = smape
+            best=predict_result
             # Save the best result
             recent_best_results.append((best, all_rmse, all_mae, all_mape, all_smape, all_RAE))
             # Sort the results by smape mean (ascending order)
@@ -433,6 +434,13 @@ if __name__ == '__main__':
 
             # After replacing or adding the result, sort the deque by smape mean (ascending order)
             recent_best_results = deque(sorted(recent_best_results, key=lambda x: np.mean(x[4])), maxlen=5)
+
+            data = np.column_stack((real_data, predict_result))
+
+            all_pred_df = pd.DataFrame(data, columns=['Ground_Truth', 'Prediction'])
+
+
+            target_dir = f'../save_result/data/CNN_pred_{output_step}'
 
             rmse_five_epoch_mean = []
             mae_five_epoch_mean = []
@@ -500,28 +508,28 @@ if __name__ == '__main__':
                 .format(delta_rmse_five_epoch_mean, delta_mae_five_epoch_mean, delta_mape_five_epoch_mean,
                         delta_smape_five_epoch_mean,
                         delta_RAE_five_epoch_mean))
-            # channels = ['Dpax[1]', 'Dpax[2]', 'Dpax[3]', 'Dpax[4]']
-            #
-            # # 指定保存路径
-            # save_path = 'E:\python\项目目录\Pi_idea3.1\MODEL\CNN-seq2seq\short-term-45-15/'  # 请根据需要修改路径
-            # os.makedirs(save_path, exist_ok=True)
+            channels = ['Dpax[1]', 'Dpax[2]', 'Dpax[3]', 'Dpax[4]','Dpax[5]','Dpax[6]','Dpax[7]']
 
-            # # 遍历每个通道绘图并保存
-            # for i in range(4):
-            #     plt.figure(figsize=(12, 6))  # 每张图的大小
-            #     plt.plot(real_data[:, i], color='red', label='True', linewidth=2)
-            #     plt.plot(predict_result[:, i], color='blue', label='reconstruction', linewidth=2)
-            #     plt.title(f'{channels[i]} Comparison of Actual and Predicted Values')
-            #     plt.xlabel('time_samples')
-            #     plt.ylabel('value')
-            #     plt.legend()
-            #     plt.grid()
-            #
-            #     # 保存图形
-            #     plt.savefig(f'{save_path}Dpax[{channels[i]}]_.png')
-            #     plt.close()  # 关闭当前图以释放内存
-            #
-            # print('--------------Print Ending-----------------')
+            # 指定保存路径
+            save_path = '.\Test\CNN-seq2seq\short-term-144-24/'  # 请根据需要修改路径
+            os.makedirs(save_path, exist_ok=True)
+
+            # 遍历每个通道绘图并保存
+            for i in range(7):
+                plt.figure(figsize=(15, 8))  # 每张图的大小
+                plt.plot(real_data[:, i], color='red', label='y_true', linestyle='--')
+                plt.plot(predict_result[:, i], color='blue', label='y_pred', linestyle='-.')
+                plt.title('Comparison') # f'{channels[i]}
+                plt.xlabel('date')
+                plt.ylabel('OT')
+                plt.legend()
+                plt.grid(True, linestyle='--', alpha=0.7)
+
+                # 保存图形
+                plt.savefig(f'{save_path}Dpax[{channels[i]}]_.png')
+                plt.close()  # 关闭当前图以释放内存
+
+            print('--------------Print Ending-----------------')
             # print('--------------Print Ending-----------------')
             # print('--------------Print Ending-----------------')
             # print('--------------Print Ending-----------------')
